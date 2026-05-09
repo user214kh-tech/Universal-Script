@@ -1,136 +1,133 @@
-– // Catbar’s Morse Code GUI - Small + Clean Hide (No White Leftover)
-– Client-side for Roblox Executors
+-- // Catbar's Morse Code GUI - Small + Clean Hide (No White Leftover)
+-- Client-side for Roblox Executors
 
-local Players = game:GetService(“Players”)
-local TextChatService = game:GetService(“TextChatService”)
-local UserInputService = game:GetService(“UserInputService”)
+local Players = game:GetService("Players")
+local TextChatService = game:GetService("TextChatService")
+local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 
-– ================== MORSE CODE ==================
+-- ================== MORSE CODE ==================
 local MORSE = {
-A = “.-”,   B = “-…”, C = “-.-.”, D = “-..”,  E = “.”,    F = “..-.”,
-G = “–.”,  H = “….”, I = “..”,   J = “.—”, K = “-.-”,  L = “.-..”,
-M = “–”,   N = “-.”,   O = “—”,  P = “.–.”, Q = “–.-”, R = “.-.”,
-S = “…”,  T = “-”,    U = “..-”,  V = “…-”, W = “.–”,  X = “-..-”,
-Y = “-.–”, Z = “–..”,
+    A = ".-",   B = "-...", C = "-.-.", D = "-..",  E = ".",    F = "..-.", 
+    G = "--.",  H = "....", I = "..",   J = ".---", K = "-.-",  L = ".-..",
+    M = "--",   N = "-.",   O = "---",  P = ".--.", Q = "--.-", R = ".-.",
+    S = "...",  T = "-",    U = "..-",  V = "...-", W = ".--",  X = "-..-",
+    Y = "-.--", Z = "--..",
 
-```
-["0"] = "-----", ["1"] = ".----", ["2"] = "..---", ["3"] = "...--",
-["4"] = "....-", ["5"] = ".....", ["6"] = "-....", ["7"] = "--...",
-["8"] = "---..", ["9"] = "----.",
+    ["0"] = "-----", ["1"] = ".----", ["2"] = "..---", ["3"] = "...--",
+    ["4"] = "....-", ["5"] = ".....", ["6"] = "-....", ["7"] = "--...",
+    ["8"] = "---..", ["9"] = "----.",
 
-[" "] = "/",
-[","] = "--..--", ["."] = ".-.-.-", ["?"] = "..--..", ["!"] = "-.-.--", ["@"] = ".--.-."
-```
-
+    [" "] = "/",
+    [","] = "--..--", ["."] = ".-.-.-", ["?"] = "..--..", ["!"] = "-.-.--", ["@"] = ".--.-."
 }
 
 local function textToMorse(text)
-text = text:upper()
-local result = {}
-for i = 1, #text do
-local c = text:sub(i, i)
-table.insert(result, MORSE[c] or “?”)
-end
-return table.concat(result, “ “)
+    text = text:upper()
+    local result = {}
+    for i = 1, #text do
+        local c = text:sub(i, i)
+        table.insert(result, MORSE[c] or "?")
+    end
+    return table.concat(result, " ")
 end
 
 local function morseToText(morseStr)
-local result = {}
-for word in morseStr:gmatch(”[^ ]+”) do
-if word == “/” then
-table.insert(result, “ “)
-else
-local found = false
-for char, code in pairs(MORSE) do
-if code == word then
-table.insert(result, char)
-found = true
-break
-end
-end
-if not found then
-table.insert(result, “?”)
-end
-end
-end
-return table.concat(result):lower()
+    local result = {}
+    for word in morseStr:gmatch("[^ ]+") do
+        if word == "/" then
+            table.insert(result, " ")
+        else
+            local found = false
+            for char, code in pairs(MORSE) do
+                if code == word then
+                    table.insert(result, char)
+                    found = true
+                    break
+                end
+            end
+            if not found then
+                table.insert(result, "?")
+            end
+        end
+    end
+    return table.concat(result):lower()
 end
 
 local function isMorseCode(text)
-local dotCount = select(2, text:gsub(”%.”, “”))
-local dashCount = select(2, text:gsub(”%-”, “”))
-local total = #text:gsub(”%s”, “”)
-if total == 0 then return false end
-local morseChars = dotCount + dashCount
-return morseChars / total >= 0.5
+    local dotCount = select(2, text:gsub("%.", ""))
+    local dashCount = select(2, text:gsub("%-", ""))
+    local total = #text:gsub("%s", "")
+    if total == 0 then return false end
+    local morseChars = dotCount + dashCount
+    return morseChars / total >= 0.5
 end
 
-– ================== SMALL GUI ==================
-local screenGui = Instance.new(“ScreenGui”)
-screenGui.Name = “CatbarMorseChat”
+-- ================== SMALL GUI ==================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "CatbarMorseChat"
 screenGui.ResetOnSpawn = false
-screenGui.Parent = player:WaitForChild(“PlayerGui”)
+screenGui.Parent = player:WaitForChild("PlayerGui")
 
-local mainFrame = Instance.new(“Frame”)
+local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 220, 0, 260)
 mainFrame.Position = UDim2.new(1, -240, 0.25, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(255, 245, 252)
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = screenGui
 
-local corner = Instance.new(“UICorner”)
+local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 14)
 corner.Parent = mainFrame
 
-local stroke = Instance.new(“UIStroke”)
+local stroke = Instance.new("UIStroke")
 stroke.Color = Color3.fromRGB(255, 170, 200)
 stroke.Thickness = 1.5
 stroke.Parent = mainFrame
 
-– Pink Title Bar (Always visible when hidden)
-local titleBar = Instance.new(“Frame”)
+-- Pink Title Bar (Always visible when hidden)
+local titleBar = Instance.new("Frame")
 titleBar.Size = UDim2.new(1, 0, 0, 30)
 titleBar.BackgroundColor3 = Color3.fromRGB(255, 182, 215)
 titleBar.BorderSizePixel = 0
 titleBar.Parent = mainFrame
 
-local titleCorner = Instance.new(“UICorner”)
+local titleCorner = Instance.new("UICorner")
 titleCorner.CornerRadius = UDim.new(0, 14)
 titleCorner.Parent = titleBar
 
-local titleLabel = Instance.new(“TextLabel”)
+local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, -60, 1, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = “🌸Catbar’s Morse Code🌸”
+titleLabel.Text = "🌸Catbar's Morse Code🌸"
 titleLabel.TextColor3 = Color3.fromRGB(220, 60, 120)
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.TextSize = 13
 titleLabel.Parent = titleBar
 
-local hideBtn = Instance.new(“TextButton”)
+local hideBtn = Instance.new("TextButton")
 hideBtn.Size = UDim2.new(0, 24, 0, 24)
 hideBtn.Position = UDim2.new(1, -54, 0, 3)
 hideBtn.BackgroundTransparency = 1
-hideBtn.Text = “▼”
+hideBtn.Text = "▼"
 hideBtn.TextColor3 = Color3.fromRGB(220, 60, 120)
 hideBtn.Font = Enum.Font.GothamBold
 hideBtn.TextSize = 16
 hideBtn.Parent = titleBar
 
-local closeBtn = Instance.new(“TextButton”)
+local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 24, 0, 24)
 closeBtn.Position = UDim2.new(1, -28, 0, 3)
 closeBtn.BackgroundTransparency = 1
-closeBtn.Text = “✕”
+closeBtn.Text = "✕"
 closeBtn.TextColor3 = Color3.fromRGB(255, 80, 110)
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.TextSize = 16
 closeBtn.Parent = titleBar
 
-– Chat Log
-local logFrame = Instance.new(“ScrollingFrame”)
+-- Chat Log
+local logFrame = Instance.new("ScrollingFrame")
 logFrame.Size = UDim2.new(1, -12, 0, 160)
 logFrame.Position = UDim2.new(0, 6, 0, 36)
 logFrame.BackgroundColor3 = Color3.fromRGB(255, 252, 255)
@@ -141,198 +138,186 @@ logFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 logFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 logFrame.Parent = mainFrame
 
-local listLayout = Instance.new(“UIListLayout”)
+local listLayout = Instance.new("UIListLayout")
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Padding = UDim.new(0, 4)
 listLayout.Parent = logFrame
 
-local logCorner = Instance.new(“UICorner”)
+local logCorner = Instance.new("UICorner")
 logCorner.CornerRadius = UDim.new(0, 10)
 logCorner.Parent = logFrame
 
-– Input Area
-local inputFrame = Instance.new(“Frame”)
+-- Input Area
+local inputFrame = Instance.new("Frame")
 inputFrame.Size = UDim2.new(1, -12, 0, 36)
 inputFrame.Position = UDim2.new(0, 6, 1, -44)
 inputFrame.BackgroundColor3 = Color3.fromRGB(255, 235, 245)
 inputFrame.BorderSizePixel = 0
 inputFrame.Parent = mainFrame
 
-local inputCorner = Instance.new(“UICorner”)
+local inputCorner = Instance.new("UICorner")
 inputCorner.CornerRadius = UDim.new(0, 10)
 inputCorner.Parent = inputFrame
 
-local inputBox = Instance.new(“TextBox”)
+local inputBox = Instance.new("TextBox")
 inputBox.Size = UDim2.new(0.67, -6, 0.75, 0)
 inputBox.Position = UDim2.new(0, 6, 0.125, 0)
 inputBox.BackgroundColor3 = Color3.new(1,1,1)
-inputBox.PlaceholderText = “Type…”
-inputBox.Text = “”
+inputBox.PlaceholderText = "Type..."
+inputBox.Text = ""
 inputBox.TextColor3 = Color3.fromRGB(70, 40, 60)
 inputBox.Font = Enum.Font.Gotham
 inputBox.TextSize = 13
 inputBox.ClearTextOnFocus = true
 inputBox.Parent = inputFrame
 
-local inputBoxCorner = Instance.new(“UICorner”)
+local inputBoxCorner = Instance.new("UICorner")
 inputBoxCorner.CornerRadius = UDim.new(0, 8)
 inputBoxCorner.Parent = inputBox
 
-local sendBtn = Instance.new(“TextButton”)
+local sendBtn = Instance.new("TextButton")
 sendBtn.Size = UDim2.new(0.29, 0, 0.75, 0)
 sendBtn.Position = UDim2.new(0.69, 4, 0.125, 0)
 sendBtn.BackgroundColor3 = Color3.fromRGB(255, 130, 175)
-sendBtn.Text = “Send”
+sendBtn.Text = "Send"
 sendBtn.TextColor3 = Color3.new(1,1,1)
 sendBtn.Font = Enum.Font.GothamBold
 sendBtn.TextSize = 13
 sendBtn.Parent = inputFrame
 
-local sendCorner = Instance.new(“UICorner”)
+local sendCorner = Instance.new("UICorner")
 sendCorner.CornerRadius = UDim.new(0, 8)
 sendCorner.Parent = sendBtn
 
-– ================== DRAGGING ==================
+-- ================== DRAGGING ==================
 local dragging = false
 local dragStart, startPos
 
 mainFrame.Active = true
 
 titleBar.InputBegan:Connect(function(input)
-if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-dragging = true
-dragStart = input.Position
-startPos = mainFrame.Position
-input.Changed:Connect(function()
-if input.UserInputState == Enum.UserInputState.End then
-dragging = false
-end
-end)
-end
-end)
-
-titleBar.InputChanged:Connect(function(input)
-if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then
-local delta = input.Position - dragStart
-mainFrame.Position = UDim2.new(
-startPos.X.Scale,
-startPos.X.Offset + delta.X,
-startPos.Y.Scale,
-startPos.Y.Offset + delta.Y
-)
-end
-end)
-
-– ================== CLEAN HIDE (No White Leftover) ==================
-local isHidden = false
-
-hideBtn.MouseButton1Click:Connect(function()
-isHidden = not isHidden
-
-```
-if isHidden then
-    logFrame.Visible = false
-    inputFrame.Visible = false
-    mainFrame.Size = UDim2.new(0, 220, 0, 34)
-    mainFrame.BackgroundTransparency = 1
-    stroke.Thickness = 0
-    hideBtn.Text = "▲"
-else
-    logFrame.Visible = true
-    inputFrame.Visible = true
-    mainFrame.Size = UDim2.new(0, 220, 0, 260)
-    mainFrame.BackgroundTransparency = 0
-    stroke.Thickness = 1.5
-    hideBtn.Text = "▼"
-end
-```
-
-end)
-
-closeBtn.MouseButton1Click:Connect(function()
-screenGui:Destroy()
-end)
-
-– ================== ADD MESSAGE ==================
-local function addToLog(sender, text, isMorse)
-local frame = Instance.new(“Frame”)
-frame.Size = UDim2.new(1, -6, 0, 0)
-frame.AutomaticSize = Enum.AutomaticSize.Y
-frame.BackgroundTransparency = 1
-frame.Parent = logFrame
-
-```
-local label = Instance.new("TextLabel")
-label.Size = UDim2.new(1, 0, 0, 0)
-label.AutomaticSize = Enum.AutomaticSize.Y
-label.BackgroundTransparency = 1
-label.TextWrapped = true
-label.TextXAlignment = Enum.TextXAlignment.Left
-label.RichText = true
-label.Font = Enum.Font.Gotham
-label.TextSize = 13
-label.Parent = frame
-
-if isMorse then
-    local decoded = morseToText(text)
-    label.Text = string.format('<font color="#FF6B9D">%s:</font> <font color="#4ECDC4">%s</font> <font color="#C89EC0">(%s)</font>',
-        sender, decoded, text)
-else
-    label.Text = string.format('<font color="#FF6B9D">%s:</font> %s', sender, text)
-end
-
-task.defer(function()
-    logFrame.CanvasPosition = Vector2.new(0, logFrame.AbsoluteCanvasSize.Y)
-end)
-```
-
-end
-
-– ================== SEND & RECEIVE ==================
-sendBtn.MouseButton1Click:Connect(function()
-local msg = inputBox.Text
-if msg == “” then return end
-
-```
-local morseMsg = textToMorse(msg)
-
-pcall(function()
-    if TextChatService.TextChannels and TextChatService.TextChannels:FindFirstChild("RBXGeneral") then
-        TextChatService.TextChannels.RBXGeneral:SendAsync(morseMsg)
-    else
-        game.ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents").SayMessageRequest:FireServer(morseMsg, "All")
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
     end
 end)
 
-addToLog(player.Name .. " (You)", msg, false)
-inputBox.Text = ""
-```
+titleBar.InputChanged:Connect(function(input)
+    if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
 
+-- ================== CLEAN HIDE (No White Leftover) ==================
+local isHidden = false
+
+hideBtn.MouseButton1Click:Connect(function()
+    isHidden = not isHidden
+
+    if isHidden then
+        logFrame.Visible = false
+        inputFrame.Visible = false
+        mainFrame.Size = UDim2.new(0, 220, 0, 34)
+        mainFrame.BackgroundTransparency = 1
+        stroke.Thickness = 0
+        hideBtn.Text = "▲"
+    else
+        logFrame.Visible = true
+        inputFrame.Visible = true
+        mainFrame.Size = UDim2.new(0, 220, 0, 260)
+        mainFrame.BackgroundTransparency = 0
+        stroke.Thickness = 1.5
+        hideBtn.Text = "▼"
+    end
+end)
+
+closeBtn.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
+end)
+
+-- ================== ADD MESSAGE ==================
+local function addToLog(sender, text, isMorse)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, -6, 0, 0)
+    frame.AutomaticSize = Enum.AutomaticSize.Y
+    frame.BackgroundTransparency = 1
+    frame.Parent = logFrame
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 0, 0)
+    label.AutomaticSize = Enum.AutomaticSize.Y
+    label.BackgroundTransparency = 1
+    label.TextWrapped = true
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.RichText = true
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 13
+    label.Parent = frame
+
+    if isMorse then
+        local decoded = morseToText(text)
+        label.Text = string.format('<font color="#FF6B9D">%s:</font> <font color="#4ECDC4">%s</font> <font color="#C89EC0">(%s)</font>',
+            sender, decoded, text)
+    else
+        label.Text = string.format('<font color="#FF6B9D">%s:</font> %s', sender, text)
+    end
+
+    task.defer(function()
+        logFrame.CanvasPosition = Vector2.new(0, logFrame.AbsoluteCanvasSize.Y)
+    end)
+end
+
+-- ================== SEND & RECEIVE ==================
+sendBtn.MouseButton1Click:Connect(function()
+    local msg = inputBox.Text
+    if msg == "" then return end
+
+    local morseMsg = textToMorse(msg)
+
+    pcall(function()
+        if TextChatService.TextChannels and TextChatService.TextChannels:FindFirstChild("RBXGeneral") then
+            TextChatService.TextChannels.RBXGeneral:SendAsync(morseMsg)
+        else
+            game.ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents").SayMessageRequest:FireServer(morseMsg, "All")
+        end
+    end)
+
+    addToLog(player.Name .. " (You)", msg, false)
+    inputBox.Text = ""
 end)
 
 local function onMessage(message)
-if not message.Text then return end
-local sender = message.TextSource and message.TextSource.Name or “Player”
-local text = message.Text
+    if not message.Text then return end
+    local sender = message.TextSource and message.TextSource.Name or "Player"
+    local text = message.Text
 
-```
-if isMorseCode(text) then
-    addToLog(sender, text, true)
-else
-    addToLog(sender, text, false)
-end
-```
-
+    if isMorseCode(text) then
+        addToLog(sender, text, true)
+    else
+        addToLog(sender, text, false)
+    end
 end
 
 if TextChatService.TextChannels then
-TextChatService.MessageReceived:Connect(onMessage)
+    TextChatService.MessageReceived:Connect(onMessage)
 end
 
 pcall(function()
-game.ReplicatedStorage:WaitForChild(“DefaultChatSystemChatEvents”).OnMessageDoneFiltering.OnClientEvent:Connect(function(data)
-onMessage({Text = data.Message, TextSource = {Name = data.FromSpeaker}})
-end)
+    game.ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents").OnMessageDoneFiltering.OnClientEvent:Connect(function(data)
+        onMessage({Text = data.Message, TextSource = {Name = data.FromSpeaker}})
+    end)
 end)
 
-print(“🌸 Small Morse GUI loaded with clean hide!”)
+print("🌸 Small Morse GUI loaded with clean hide!")
