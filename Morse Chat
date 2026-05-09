@@ -9,21 +9,25 @@ local player = Players.LocalPlayer
 
 -- ================== MORSE CODE ==================
 local MORSE = {
-    A = ".-", B = "-...", C = "-.-.", D = "-..", E = ".", F = "..-.", G = "--.",
-    H = "....", I = "..", J = ".---", K = "-.-", L = ".-..", M = "--", N = "-.",
-    O = "---", P = ".--.", Q = "--.-", R = ".-.", S = "...", T = "-", U = "..-",
-    V = "...-", W = ".--", X = "-..-", Y = "-.--", Z = "--..",
+    A = ".-",   B = "-...", C = "-.-.", D = "-..",  E = ".",    F = "..-.", 
+    G = "--.",  H = "....", I = "..",   J = ".---", K = "-.-",  L = ".-..",
+    M = "--",   N = "-.",   O = "---",  P = ".--.", Q = "--.-", R = ".-.",
+    S = "...",  T = "-",    U = "..-",  V = "...-", W = ".--",  X = "-..-",
+    Y = "-.--", Z = "--..",
+
     ["0"] = "-----", ["1"] = ".----", ["2"] = "..---", ["3"] = "...--",
     ["4"] = "....-", ["5"] = ".....", ["6"] = "-....", ["7"] = "--...",
     ["8"] = "---..", ["9"] = "----.",
-    [" "] = "/", [","] = "--..--", ["."] = ".-.-.-", ["?"] = "..--..", ["!"] = "-.-.--"
+
+    [" "] = "/",
+    [","] = "--..--", ["."] = ".-.-.-", ["?"] = "..--..", ["!"] = "-.-.--", ["@"] = ".--.-."
 }
 
 local function textToMorse(text)
     text = text:upper()
     local result = {}
     for i = 1, #text do
-        local c = text:sub(i,i)
+        local c = text:sub(i, i)
         table.insert(result, MORSE[c] or "?")
     end
     return table.concat(result, " ")
@@ -31,11 +35,20 @@ end
 
 local function morseToText(morseStr)
     local result = {}
-    for word in morseStr:gmatch("([^ ]+)") do
-        for char, code in pairs(MORSE) do
-            if code == word then
-                table.insert(result, char)
-                break
+    for word in morseStr:gmatch("[^ ]+") do
+        if word == "/" then
+            table.insert(result, " ")
+        else
+            local found = false
+            for char, code in pairs(MORSE) do
+                if code == word then
+                    table.insert(result, char)
+                    found = true
+                    break
+                end
+            end
+            if not found then
+                table.insert(result, "?")
             end
         end
     end
@@ -281,7 +294,7 @@ local function onMessage(message)
     local sender = message.TextSource and message.TextSource.Name or "Player"
     local text = message.Text
 
-    if text:match("^[%.-%s]+$") and #text:gsub("%s+", "") > 3 then
+    if text:match("^[%.%-%s/]+$") and #text:gsub("%s+", "") > 3 then
         addToLog(sender, text, true)
     else
         addToLog(sender, text, false)
