@@ -55,6 +55,15 @@ local function morseToText(morseStr)
     return table.concat(result):lower()
 end
 
+local function isMorseCode(text)
+    local dotCount = select(2, text:gsub("%.", ""))
+    local dashCount = select(2, text:gsub("%-", ""))
+    local total = #text:gsub("%s", "")
+    if total == 0 then return false end
+    local morseChars = dotCount + dashCount
+    return morseChars / total >= 0.5
+end
+
 -- ================== SMALL GUI ==================
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "CatbarMorseChat"
@@ -294,7 +303,7 @@ local function onMessage(message)
     local sender = message.TextSource and message.TextSource.Name or "Player"
     local text = message.Text
 
-    if text:match("^[%.%-%s/]+$") and #text:gsub("%s+", "") > 3 then
+    if isMorseCode(text) then
         addToLog(sender, text, true)
     else
         addToLog(sender, text, false)
