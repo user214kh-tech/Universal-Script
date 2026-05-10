@@ -1,9 +1,10 @@
--- // Catbar's Morse Code GUI - Small + Clean Hide (No White Leftover)
+-- // Catbar's Morse Code GUI - Morse + Movement Mode
 -- Client-side for Roblox Executors
 
 local Players = game:GetService("Players")
 local TextChatService = game:GetService("TextChatService")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 
@@ -64,14 +65,197 @@ local function isMorseCode(text)
     return morseChars / total >= 0.5
 end
 
--- ================== SMALL GUI ==================
+-- ================== MOVEMENT ENCODING ==================
+local MOVE_DIRS = {
+    W = Vector3.new(0, 0, -1),
+    A = Vector3.new(-1, 0, 0),
+    S = Vector3.new(0, 0, 1),
+    D = Vector3.new(1, 0, 0),
+}
+
+local MOVE_ALPHA = {
+    A = "WW", B = "WA", C = "WS", D = "WD", E = "AW",
+    F = "AA", G = "AS", H = "AD", I = "SW", J = "SA",
+    K = "SS", L = "SD", M = "DW", N = "DA", O = "DS",
+    P = "DD", Q = "WAW", R = "WAS", S = "WAD", T = "WDW",
+    U = "WDA", V = "WDS", W = "AWW", X = "AWA", Y = "AWS",
+    Z = "AWD",
+    ["0"] = "WWWW", ["1"] = "WWWA", ["2"] = "WWWS", ["3"] = "WWWD",
+    ["4"] = "WWAW", ["5"] = "WWAA", ["6"] = "WWAS", ["7"] = "WWAD",
+    ["8"] = "WWSW", ["9"] = "WWSA",
+    [" "] = "PAUSE",
+}
+
+local MOVE_DECODE = {}
+for char, seq in pairs(MOVE_ALPHA) do
+    MOVE_DECODE[seq] = char
+end
+
+local function textToMoves(text)
+    text = text:upper()
+    local result = {}
+    for i = 1, #text do
+        local c = text:sub(i, i)
+        if MOVE_ALPHA[c] then
+            table.insert(result, MOVE_ALPHA[c])
+        end
+    end
+    return table.concat(result, "-")
+end
+
+local function movesToText(moveStr)
+    local result = {}
+    for token in moveStr:gmatch("[^%-]+") do
+        if token == "PAUSE" then
+            table.insert(result, " ")
+        elseif MOVE_DECODE[token] then
+            table.insert(result, MOVE_DECODE[token]:lower())
+        else
+            table.insert(result, "?")
+        end
+    end
+    return table.concat(result)
+end
+
+-- ================== MOVEMENT PERFORMER ==================
+local moveQueue = {}
+local isMoving = false
+local STEP_DIST = 3
+local STEP_PAUSE = 0.22
+local LETTER_PAUSE = 0.45
+
+local function getHRP()
+    local char = player.Character or player.CharacterAdded:Wait()
+    return char:FindFirstChild("HumanoidRootPart"), char:FindFirstChild("Humanoid")
+end
+
+local function nudge(dir)
+    local hrp, hum = getHRP()
+    if not hrp or not hum then return end
+    if hum.Health <= 0 then return end
+    local cf = hrp.CFrame
+    local targetPos = hrp.Position + dir * STEP_DIST
+    hrp.CFrame = CFrame.new(targetPos, targetPos + cf.LookVector)
+    task.wait(STEP_PAUSE)
+    hrp.CFrame = CFrame.new(hrp.Position - dir * STEP_DIST, (hrp.Position - dir * STEP_DIST) + cf.LookVector)
+    task.wait(STEP_PAUSE * 0.5)
+end
+
+local function performMoveSequence(sequence)
+    if sequence == "PAUSE" then
+        task.wait(LETTER_PAUSE * 1.5)
+        return
+    end
+    for i = 1, #sequence do
+        local d = sequence:sub(i, i)
+        if MOVE_DIRS[d] then
+            nudge(MOVE_DIRS[d])
+        end
+    end
+    task.wait(LETTER_PAUSE)
+end
+
+local function processQueue()
+    if isMoving then return end
+    isMoving = true
+    while #moveQueue > 0 do
+        local seq = table.remove(moveQueue, 1)
+        performMoveSequence(seq)
+    end
+    isMoving = false
+end
+
+local function sendViaMovement(text)
+    text = text:upper()
+    for i = 1, #text do
+        local c = text:sub(i, i)
+        local seq = MOVE_ALPHA[c]
+        if seq then
+            table.insert(moveQueue, seq)
+        end
+    end
+    task.spawn(processQueue)
+end
+
+-- ================== MOVEMENT OBSERVER ==================
+local playerMoveBuffers = {}
+local DECODE_TIMEOUT = 1.2
+local WORD_TIMEOUT   = 2.5
+local prevPositions = {}
+
+RunService.Heartbeat:Connect(function()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p == player then continue end
+        local char = p.Character
+        if not char then continue end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+
+        local pos = hrp.Position
+        local prev = prevPositions[p.Name]
+
+        if prev then
+            local delta = pos - prev
+            local dist = delta.Magnitude
+
+            if dist > 1.2 then
+                local ax = math.abs(delta.X)
+                local az = math.abs(delta.Z)
+                local dir = nil
+                if ax > az then
+                    dir = delta.X > 0 and "D" or "A"
+                else
+                    dir = delta.Z > 0 and "S" or "W"
+                end
+
+                if dir then
+                    local buf = playerMoveBuffers[p.Name]
+                    if not buf then
+                        playerMoveBuffers[p.Name] = {seq = dir, lastTime = tick(), letters = {}}
+                        buf = playerMoveBuffers[p.Name]
+                    else
+                        buf.seq = buf.seq .. dir
+                        buf.lastTime = tick()
+                    end
+                end
+            end
+        end
+
+        prevPositions[p.Name] = pos
+    end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        local now = tick()
+        for name, buf in pairs(playerMoveBuffers) do
+            if buf.seq ~= "" and (now - buf.lastTime) >= DECODE_TIMEOUT then
+                local decoded = MOVE_DECODE[buf.seq]
+                if decoded then
+                    table.insert(buf.letters, decoded:lower())
+                end
+                buf.seq = ""
+            end
+            if #buf.letters > 0 and (now - buf.lastTime) >= WORD_TIMEOUT then
+                local word = table.concat(buf.letters)
+                if word ~= "" then
+                    addToLog(name .. " 🕹️", word, false, true)
+                end
+                buf.letters = {}
+            end
+        end
+    end
+end)
+
+-- ================== GUI ==================
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "CatbarMorseChat"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 220, 0, 260)
+mainFrame.Size = UDim2.new(0, 220, 0, 295)
 mainFrame.Position = UDim2.new(1, -240, 0.25, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(255, 245, 252)
 mainFrame.BorderSizePixel = 0
@@ -86,7 +270,6 @@ stroke.Color = Color3.fromRGB(255, 170, 200)
 stroke.Thickness = 1.5
 stroke.Parent = mainFrame
 
--- Pink Title Bar (Always visible when hidden)
 local titleBar = Instance.new("Frame")
 titleBar.Size = UDim2.new(1, 0, 0, 30)
 titleBar.BackgroundColor3 = Color3.fromRGB(255, 182, 215)
@@ -126,10 +309,48 @@ closeBtn.Font = Enum.Font.GothamBold
 closeBtn.TextSize = 16
 closeBtn.Parent = titleBar
 
--- Chat Log
+local modeBar = Instance.new("Frame")
+modeBar.Size = UDim2.new(1, -12, 0, 24)
+modeBar.Position = UDim2.new(0, 6, 0, 34)
+modeBar.BackgroundColor3 = Color3.fromRGB(255, 230, 243)
+modeBar.BorderSizePixel = 0
+modeBar.Parent = mainFrame
+
+local modeBarCorner = Instance.new("UICorner")
+modeBarCorner.CornerRadius = UDim.new(0, 8)
+modeBarCorner.Parent = modeBar
+
+local morseTab = Instance.new("TextButton")
+morseTab.Size = UDim2.new(0.5, -2, 1, -4)
+morseTab.Position = UDim2.new(0, 2, 0, 2)
+morseTab.BackgroundColor3 = Color3.fromRGB(255, 130, 175)
+morseTab.Text = "📡 Morse"
+morseTab.TextColor3 = Color3.new(1, 1, 1)
+morseTab.Font = Enum.Font.GothamBold
+morseTab.TextSize = 11
+morseTab.Parent = modeBar
+
+local morseTabCorner = Instance.new("UICorner")
+morseTabCorner.CornerRadius = UDim.new(0, 6)
+morseTabCorner.Parent = morseTab
+
+local moveTab = Instance.new("TextButton")
+moveTab.Size = UDim2.new(0.5, -2, 1, -4)
+moveTab.Position = UDim2.new(0.5, 0, 0, 2)
+moveTab.BackgroundColor3 = Color3.fromRGB(220, 200, 230)
+moveTab.Text = "🕹️ Movement"
+moveTab.TextColor3 = Color3.fromRGB(140, 80, 160)
+moveTab.Font = Enum.Font.GothamBold
+moveTab.TextSize = 11
+moveTab.Parent = modeBar
+
+local moveTabCorner = Instance.new("UICorner")
+moveTabCorner.CornerRadius = UDim.new(0, 6)
+moveTabCorner.Parent = moveTab
+
 local logFrame = Instance.new("ScrollingFrame")
-logFrame.Size = UDim2.new(1, -12, 0, 160)
-logFrame.Position = UDim2.new(0, 6, 0, 36)
+logFrame.Size = UDim2.new(1, -12, 0, 155)
+logFrame.Position = UDim2.new(0, 6, 0, 62)
 logFrame.BackgroundColor3 = Color3.fromRGB(255, 252, 255)
 logFrame.BorderSizePixel = 0
 logFrame.ScrollBarThickness = 4
@@ -147,7 +368,17 @@ local logCorner = Instance.new("UICorner")
 logCorner.CornerRadius = UDim.new(0, 10)
 logCorner.Parent = logFrame
 
--- Input Area
+local hintLabel = Instance.new("TextLabel")
+hintLabel.Size = UDim2.new(1, -12, 0, 18)
+hintLabel.Position = UDim2.new(0, 6, 0, 221)
+hintLabel.BackgroundTransparency = 1
+hintLabel.Text = "W=↑ A=← S=↓ D=→ | 2-steps per letter"
+hintLabel.TextColor3 = Color3.fromRGB(180, 120, 160)
+hintLabel.Font = Enum.Font.Gotham
+hintLabel.TextSize = 10
+hintLabel.Visible = false
+hintLabel.Parent = mainFrame
+
 local inputFrame = Instance.new("Frame")
 inputFrame.Size = UDim2.new(1, -12, 0, 36)
 inputFrame.Position = UDim2.new(0, 6, 1, -44)
@@ -162,7 +393,7 @@ inputCorner.Parent = inputFrame
 local inputBox = Instance.new("TextBox")
 inputBox.Size = UDim2.new(0.67, -6, 0.75, 0)
 inputBox.Position = UDim2.new(0, 6, 0.125, 0)
-inputBox.BackgroundColor3 = Color3.new(1,1,1)
+inputBox.BackgroundColor3 = Color3.new(1, 1, 1)
 inputBox.PlaceholderText = "Type..."
 inputBox.Text = ""
 inputBox.TextColor3 = Color3.fromRGB(70, 40, 60)
@@ -180,7 +411,7 @@ sendBtn.Size = UDim2.new(0.29, 0, 0.75, 0)
 sendBtn.Position = UDim2.new(0.69, 4, 0.125, 0)
 sendBtn.BackgroundColor3 = Color3.fromRGB(255, 130, 175)
 sendBtn.Text = "Send"
-sendBtn.TextColor3 = Color3.new(1,1,1)
+sendBtn.TextColor3 = Color3.new(1, 1, 1)
 sendBtn.Font = Enum.Font.GothamBold
 sendBtn.TextSize = 13
 sendBtn.Parent = inputFrame
@@ -188,6 +419,33 @@ sendBtn.Parent = inputFrame
 local sendCorner = Instance.new("UICorner")
 sendCorner.CornerRadius = UDim.new(0, 8)
 sendCorner.Parent = sendBtn
+
+-- ================== MODE STATE ==================
+local currentMode = "morse"
+
+local function setMode(mode)
+    currentMode = mode
+    if mode == "morse" then
+        morseTab.BackgroundColor3 = Color3.fromRGB(255, 130, 175)
+        morseTab.TextColor3 = Color3.new(1, 1, 1)
+        moveTab.BackgroundColor3 = Color3.fromRGB(220, 200, 230)
+        moveTab.TextColor3 = Color3.fromRGB(140, 80, 160)
+        inputBox.PlaceholderText = "Type to send morse..."
+        sendBtn.BackgroundColor3 = Color3.fromRGB(255, 130, 175)
+        hintLabel.Visible = false
+    else
+        moveTab.BackgroundColor3 = Color3.fromRGB(160, 100, 210)
+        moveTab.TextColor3 = Color3.new(1, 1, 1)
+        morseTab.BackgroundColor3 = Color3.fromRGB(220, 200, 230)
+        morseTab.TextColor3 = Color3.fromRGB(160, 90, 130)
+        inputBox.PlaceholderText = "Type to move-speak..."
+        sendBtn.BackgroundColor3 = Color3.fromRGB(160, 100, 210)
+        hintLabel.Visible = true
+    end
+end
+
+morseTab.MouseButton1Click:Connect(function() setMode("morse") end)
+moveTab.MouseButton1Click:Connect(function() setMode("move") end)
 
 -- ================== DRAGGING ==================
 local dragging = false
@@ -220,15 +478,16 @@ titleBar.InputChanged:Connect(function(input)
     end
 end)
 
--- ================== CLEAN HIDE (No White Leftover) ==================
+-- ================== CLEAN HIDE ==================
 local isHidden = false
 
 hideBtn.MouseButton1Click:Connect(function()
     isHidden = not isHidden
-
     if isHidden then
         logFrame.Visible = false
         inputFrame.Visible = false
+        modeBar.Visible = false
+        hintLabel.Visible = false
         mainFrame.Size = UDim2.new(0, 220, 0, 34)
         mainFrame.BackgroundTransparency = 1
         stroke.Thickness = 0
@@ -236,7 +495,9 @@ hideBtn.MouseButton1Click:Connect(function()
     else
         logFrame.Visible = true
         inputFrame.Visible = true
-        mainFrame.Size = UDim2.new(0, 220, 0, 260)
+        modeBar.Visible = true
+        if currentMode == "move" then hintLabel.Visible = true end
+        mainFrame.Size = UDim2.new(0, 220, 0, 295)
         mainFrame.BackgroundTransparency = 0
         stroke.Thickness = 1.5
         hideBtn.Text = "▼"
@@ -248,7 +509,7 @@ closeBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ================== ADD MESSAGE ==================
-local function addToLog(sender, text, isMorse)
+function addToLog(sender, text, isMorse, isMovement)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, -6, 0, 0)
     frame.AutomaticSize = Enum.AutomaticSize.Y
@@ -266,7 +527,10 @@ local function addToLog(sender, text, isMorse)
     label.TextSize = 13
     label.Parent = frame
 
-    if isMorse then
+    if isMovement then
+        label.Text = string.format('<font color="#9B59B6">%s:</font> <font color="#27AE60">%s</font> <font color="#BDC3C7">[moves]</font>',
+            sender, text)
+    elseif isMorse then
         local decoded = morseToText(text)
         label.Text = string.format('<font color="#FF6B9D">%s:</font> <font color="#4ECDC4">%s</font> <font color="#C89EC0">(%s)</font>',
             sender, decoded, text)
@@ -279,34 +543,47 @@ local function addToLog(sender, text, isMorse)
     end)
 end
 
--- ================== SEND & RECEIVE ==================
+-- ================== SEND ==================
 sendBtn.MouseButton1Click:Connect(function()
     local msg = inputBox.Text
     if msg == "" then return end
 
-    local morseMsg = textToMorse(msg)
+    if currentMode == "morse" then
+        local morseMsg = textToMorse(msg)
+        pcall(function()
+            if TextChatService.TextChannels and TextChatService.TextChannels:FindFirstChild("RBXGeneral") then
+                TextChatService.TextChannels.RBXGeneral:SendAsync(morseMsg)
+            else
+                game.ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents").SayMessageRequest:FireServer(morseMsg, "All")
+            end
+        end)
+        addToLog(player.Name .. " (You)", msg, false, false)
+    else
+        addToLog(player.Name .. " 🕹️ (You)", msg, false, true)
+        task.spawn(function()
+            sendViaMovement(msg)
+        end)
+    end
 
-    pcall(function()
-        if TextChatService.TextChannels and TextChatService.TextChannels:FindFirstChild("RBXGeneral") then
-            TextChatService.TextChannels.RBXGeneral:SendAsync(morseMsg)
-        else
-            game.ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents").SayMessageRequest:FireServer(morseMsg, "All")
-        end
-    end)
-
-    addToLog(player.Name .. " (You)", msg, false)
     inputBox.Text = ""
 end)
 
+inputBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        sendBtn.MouseButton1Click:Fire()
+    end
+end)
+
+-- ================== RECEIVE (Morse) ==================
 local function onMessage(message)
     if not message.Text then return end
     local sender = message.TextSource and message.TextSource.Name or "Player"
     local text = message.Text
 
     if isMorseCode(text) then
-        addToLog(sender, text, true)
+        addToLog(sender, text, true, false)
     else
-        addToLog(sender, text, false)
+        addToLog(sender, text, false, false)
     end
 end
 
@@ -320,4 +597,4 @@ pcall(function()
     end)
 end)
 
-print("🌸 Small Morse GUI loaded with clean hide!")
+print("🌸 Morse + Movement GUI loaded! Tabs: 📡 Morse | 🕹️ Movement")
